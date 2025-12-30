@@ -22,40 +22,6 @@ Requires `libcsfml-dev` to be installed.
 ```bash
 # Successor RPG
 
-Un jeu d'aventure 2D développé en **C** avec la bibliothèque **CSFML**. Projet réalisé dans le cadre d'un projet de groupe à l'Epitech — objectif : concevoir un moteur simple, un système d'inventaire, et un système de combat tout en appliquant de bonnes pratiques en C.
-
-## Table des matières
-- Description
-- Fonctionnalités
-- Prérequis
-- Compilation et exécution
-- Structure du dépôt
-- Contribution
-- Auteurs & Remerciements
-# Successor RPG
-
-Successor RPG is a 2D adventure game written in C using the CSFML library. It was created by a group of students (Epitech) as a learning project and for fun — intended for education and non-commercial enjoyment.
-
-## Table of Contents
-- Description
-- Features
-- Requirements
-- Build & Run
-- Repository Structure
-- Contribution
-- Authors & Credits
-- Licensing
-
-## Description
-Successor RPG is a prototype 2D RPG featuring exploration, dialogues, quests, inventory, and combat. The codebase is organized for readability and modularity to make it easier to extend.
-
-## Key Features
-- 2D engine with collision handling and zone transitions
-- Inventory and equipment system
-- Combat mechanics (see `srcs/combat`)
-- Save/load support
-- Menus and dialogue system
-
 ## Requirements
 - Linux
 - C compiler (gcc/clang)
