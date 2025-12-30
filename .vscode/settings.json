@@ -1,0 +1,10 @@
+{
+    "files.associations": {
+        "characters.h": "c",
+        "rpg.h": "c",
+        "my.h": "c",
+        "compare": "c",
+        "type_traits": "c",
+        "graphics.h": "c"
+    }
+}

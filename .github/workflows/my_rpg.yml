@@ -1,0 +1,122 @@
+name: rpg
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+env:
+  EXECUTABLES: "my_rpg"
+  MIRROR_URL: "git@github.com:EpitechPromo2028/B-MUL-200-MPL-2-1-myrpg-matteo.aufiero.git"
+
+jobs:
+  coding_style:
+    name: Coding Style
+    runs-on: ubuntu-latest
+    container: ghcr.io/epitech/coding-style-checker:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Clean coding style report
+        run: rm -f coding-style-reports.log
+      - id: check
+        run: |
+          check.sh $(pwd) $(pwd)
+          while IFS= read -r ERRORS
+          do
+            array=(`echo $ERRORS | sed 's/:/\n/g'`)
+            echo "::error file=${array[1]#./},line=${array[2]#./},col=0::${array[3]#./}"
+          done < "$(pwd)/coding-style-reports.log"
+          if [[ -s $(pwd)/coding-style-reports.log ]]
+          then
+            cat coding-style-reports.log
+          else
+            echo No coding style errors detected
+          fi
+      - name: Upload coding style report
+        uses: actions/upload-artifact@v2
+        with:
+          name: coding-style-report
+          path: coding-style-reports.log
+
+  check_program_compilation:
+    needs: coding_style
+    name: "Checks if make compil"
+    runs-on: ubuntu-latest
+    container:
+      image: epitechcontent/epitest-docker:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build project
+        run: make ; make clean
+      - name: Check if executables exist
+        run: |
+          if [ -f "./${{env.EXECUTABLES}}" ]; then
+            echo "${{env.EXECUTABLES}} exists"
+          else
+            echo "${{env.EXECUTABLES}} does not exist"
+            exit 1
+          fi
+          make fclean
+      - name: Send notification if build fails
+        if: failure()
+        uses: appleboy/discord-action@master
+        with:
+          webhook_id: ${{ secrets.DISCORD_WEBHOOK_ID }}
+          webhook_token: ${{ secrets.DISCORD_WEBHOOK_TOKEN }}
+          message: '@everyone, La compilation a échoué sur ${{ github.ref }}., On te voit ${{ github.actor }}.'
+
+  step_check:
+    needs: check_program_compilation
+    name: Check
+    runs-on: ubuntu-latest
+    outputs:
+      ignore: ${{ steps.set_ignore.outputs.ignore }}
+    steps:
+      - id: set_ignore
+        run: echo "::set-output name=ignore::${{ contains(secrets.CHECK_SECRET, github.repository ) }}"
+        timeout-minutes: 2
+
+  push_to_mirror:
+    needs: step_check
+    if: ${{ github.event_name == 'push' && needs.step_check.outputs.ignore != 'false' }}
+    name: Push to Mirror
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pixta-dev/repository-mirroring-action@v1
+        with:
+          target_repo_url: ${{ env.MIRROR_URL }}
+          ssh_private_key: ${{ secrets.SECRET_PRIVATE }}
+
+  send_notification:
+    needs: push_to_mirror
+    name: Send Notification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download coding style report
+        uses: actions/download-artifact@v2
+        with:
+          name: coding-style-report
+      - name: Check coding style errors
+        run: echo "CODING_STYLE_ERRORS=$(egrep 'MAJOR|MINOR|INFO' coding-style-reports.log | wc -l)" >> $GITHUB_ENV
+      - name: Set message
+        id: set_message
+        env:
+          CODING_STYLE_ERRORS: ${{ env.CODING_STYLE_ERRORS }}
+        run: |
+          if [[ $CODING_STYLE_ERRORS -lt 20 ]]; then
+            echo "::set-output name=message::**Nouveau push** sur ${{ github.ref }} a été effectué par ${{ github.actor }} (commit : ${{ github.sha }})., **Erreurs** de coding style : ${{ env.CODING_STYLE_ERRORS }}"
+          else
+            echo "::set-output name=message::@everyone,**Nouveau push** sur ${{ github.ref }} a été effectué par ${{ github.actor }} (commit : ${{ github.sha }})., **Erreurs** de coding style : **${{ env.CODING_STYLE_ERRORS }}**"
+          fi
+      - name: Send Discord notification
+        uses: appleboy/discord-action@master
+        with:
+          webhook_id: ${{ secrets.DISCORD_WEBHOOK_ID }}
+          webhook_token: ${{ secrets.DISCORD_WEBHOOK_TOKEN }}
+          message: ${{ steps.set_message.outputs.message }}
